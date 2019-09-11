@@ -3,6 +3,11 @@ import os
 import re
 from collections import namedtuple
 import pandas as pd
+import numpy as np
+from sklearn import linear_model
+import matplotlib.pyplot as plt
+
+# %% Load all the data
 
 path = os.path.join('data', "trail1.tsv")
 
@@ -57,3 +62,26 @@ columns = columns + ['action_%i' % i for i in list(range(1, num_cols - len(colum
 
 # Build the pandas data frame
 frame = process_frame(pd.DataFrame(rows, columns=columns))
+
+
+# %% Analysis
+def plot_with_regression(series):
+    """Plots a series with its linear regression"""
+    domain = np.arange(series.size).reshape(-1, 1)
+    reg = linear_model.LinearRegression()
+    reg.fit(domain, series)
+    plt.figure()
+    plt.scatter(domain, series)
+    plt.plot(domain, reg.predict(domain), color='r')
+    plt.show()
+
+
+groups = frame.groupby(lambda ix: ix % 100)
+X = np.arange(100).reshape(-1, 1)
+# Compute the average iteration number each 100 epochs
+avg_iterations = groups['iterations'].aggregate(np.mean)
+plot_with_regression(avg_iterations)
+# Compute the average number papers read each 100 epochs
+avg_papers = groups['papers'].aggregate(np.mean)
+# Do a linear regression to compute the number of iterations
+plot_with_regression(avg_papers)
