@@ -9,27 +9,29 @@ import matplotlib.pyplot as plt
 
 # %% Load all the data
 
-path = os.path.join('data', "trail1.tsv")
+path = os.path.join('data', "trail2.tsv")
 
 # Regexs for parsing the actions
-participant = re.compile(r"""Set\(([\w\,\s–\-\.\(\)%&']+)\)""")
-action = re.compile(r"""^(\w+)\(""")
+participant = re.compile(r"""Set\(([\w\,\s–\-\.%&'`]+)\)""")
+action = re.compile(r"""^([\d\.]+)/(\w+)\(""")
 
 # This will be our Action data structure
-Action = namedtuple("Action", "action pa pb")
+Action = namedtuple("Action", "epsilon action pa pb")
 
 
 def parse_action(action_string):
     """Parses an action string into an Action tuple"""
 
     if action_string:
+        # Preprocess the action string
+        action_string = action_string.replace("()", "").replace("(,", ",")
         a = action.findall(action_string)
-        assert len(a) == 1, "There should only be one action on this string"
+        epsilon, act = float(a[0][0]), a[0][1]
         p = participant.findall(action_string)
         if len(p) == 2:
-            return Action(a[0], p[0], p[1])
+            return Action(epsilon, act, p[0], p[1])
         else:
-            return Action(a[0], p[0], None)
+            return Action(epsilon, act, p[0], None)
     else:
         return None
 
