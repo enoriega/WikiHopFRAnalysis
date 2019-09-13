@@ -109,11 +109,11 @@ def action_distributions(frm):
     return simplified_actions.value_counts()
 
 
-def plot_action_distributions(ax, frm):
+def plot_action_distributions(ax, frm, epsilons=None):
     """Creates a stack plot with the distribution of exploration/exploitation actions"""
     domain = np.arange(frm.shape[0])
     ax.stackplot(domain, frm.values[:, 0], frm.values[:, 1], labels=["Exploration", "Exploitation"])
-    ax.legend(loc='lower right')
+    ax.legend(loc='lower left')
     ax.grid(True, linestyle='--')
     ax.set_xlabel("Training Epoch")
     ax.set_title("Explore/Exploit tradeoff")
@@ -126,6 +126,16 @@ def plot_action_distributions(ax, frm):
     for label in ax.get_xaxis().get_ticklabels():
         label.set_rotation(45)
         label.set_fontsize(8)
+
+    if epsilons is not None:
+        ax2 = ax.twinx()
+        ax2.set_ymargin(0.)
+        ax2.set_xmargin(0.)
+        ax2.autoscale(False)
+        ax2.plot(domain, epsilons, 'r--', alpha=0.5)
+        ax2.set_ylabel("$\epsilon$-greedy schedule", color='tab:red')
+        for label in ax2.yaxis.get_ticklabels():
+            label.set_color('tab:red')
 
 
 # %% Analysis
@@ -148,5 +158,5 @@ dists = pd.concat([dists[:, 'Exploration'], dists[:, 'Exploitation']], axis=1).f
 dists = dists.div(dists.sum(axis=1), axis=0)  # Normalize the rows
 dists.columns = ["Exploration", 'Exploitation']
 fig, ax = plt.subplots()
-plot_action_distributions(ax, dists)
+plot_action_distributions(ax, dists, epsilons=epsilons)
 fig.show()
