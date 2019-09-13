@@ -1,7 +1,7 @@
 import csv
 import os
 import re
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter, PercentFormatter
 from collections import namedtuple
 import pandas as pd
 import numpy as np
@@ -68,8 +68,8 @@ columns = columns + action_columns
 frame = process_frame(pd.DataFrame(rows, columns=columns))
 
 
-# %% Analysis
-def plot_with_regression(ax, series, epsilons=None):
+# %% Helper functions
+def plot_with_regression(ax, series, ylabel, title, epsilons=None):
     """Plots a series with its linear regression"""
     domain = np.arange(series.size).reshape(-1, 1)
     reg = linear_model.LinearRegression()
@@ -77,7 +77,10 @@ def plot_with_regression(ax, series, epsilons=None):
     ax.scatter(domain, series, s=7)
     ax.tick_params(axis='y', labelcolor='tab:blue')
     ax.plot(domain, reg.predict(domain), color='y', lw=3)
+    ax.grid(True)
+    ax.set_title(title)
     ax.set_xlabel("Training Epoch")
+    ax.set_ylabel(ylabel, color = 'tab:blue')
     ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
     for label in ax.get_xaxis().get_ticklabels():
         label.set_rotation(45)
@@ -92,27 +95,58 @@ def plot_with_regression(ax, series, epsilons=None):
 
 
 def avg_epsilon(grp):
-    "Returns the average epsilon for each batch of epochs"
+    """Returns the average epsilon for each batch of epochs"""
     # Create a series with all the actions
     all_actions = pd.concat(grp[col] for col in action_columns)
     return all_actions.dropna().map(lambda a: a.epsilon).mean()
 
 
+def action_distributions(frm):
+    """Computes the distribution of actions from a data frame"""
+    all_actions = pd.concat(frm[col] for col in action_columns).dropna()
+    simplified_actions = all_actions.map(
+        lambda a: "Exploration" if a.action.startswith('Exploration') else 'Exploitation')
+    return simplified_actions.value_counts()
+
+
+def plot_action_distributions(ax, frm):
+    """Creates a stack plot with the distribution of exploration/exploitation actions"""
+    domain = np.arange(frm.shape[0])
+    ax.stackplot(domain, frm.values[:, 0], frm.values[:, 1], labels=["Exploration", "Exploitation"])
+    ax.legend(loc='lower right')
+    ax.grid(True, linestyle='--')
+    ax.set_xlabel("Training Epoch")
+    ax.set_title("Explore/Exploit tradeoff")
+    ax.set_ylabel("Percentage of actions")
+    ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
+    ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.))
+    ax.set_ymargin(0.)
+    ax.set_xmargin(0.)
+    ax.autoscale(True)
+    for label in ax.get_xaxis().get_ticklabels():
+        label.set_rotation(45)
+        label.set_fontsize(8)
+
+
+# %% Analysis
 groups = frame.groupby(lambda ix: ix // 100)
 X = np.arange(1000).reshape(-1, 1)
 epsilons = groups.apply(avg_epsilon)
 # Compute the average iteration number each 100 epochs
 fig, ax = plt.subplots()
 avg_iterations = groups['iterations'].mean()
-plot_with_regression(ax, avg_iterations, epsilons.values)
-ax.set_title("Average Iterations per epoch")
-ax.set_ylabel("Avg iterations", color='tab:blue')
+plot_with_regression(ax, avg_iterations, epsilons=epsilons.values, title="Average Iterations per epoch", ylabel="Avg iterations")
 fig.show()
 # Compute the average number papers read each 100 epochs
 fig, ax = plt.subplots()
 avg_papers = groups['papers'].mean()
-# Do a linear regression to compute the number of iterations
-plot_with_regression(ax, avg_papers, epsilons.values)
-ax.set_title("Average Papers")
-ax.set_ylabel("Avg papers read", color='tab:blue')
+plot_with_regression(ax, avg_papers, "Average Papers", "Avg papers read", epsilons.values)
+fig.show()
+# Compute the distribution of actions
+dists = groups.apply(action_distributions)
+dists = pd.concat([dists[:, 'Exploration'], dists[:, 'Exploitation']], axis=1).fillna(0.0)
+dists = dists.div(dists.sum(axis=1), axis=0)  # Normalize the rows
+dists.columns = ["Exploration", 'Exploitation']
+fig, ax = plt.subplots()
+plot_action_distributions(ax, dists)
 fig.show()
