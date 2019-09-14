@@ -109,17 +109,24 @@ def action_distributions(frm):
     return simplified_actions.value_counts()
 
 
-def plot_action_distributions(ax, frm, epsilons=None):
+def outcome_distributions(frm):
+    """Computes the distribution of actions from a data frame"""
+    outcomes = frm.success
+    return outcomes.value_counts()
+
+
+def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=False, epsilons=None):
     """Creates a stack plot with the distribution of exploration/exploitation actions"""
     domain = np.arange(frm.shape[0])
-    ax.stackplot(domain, frm.values[:, 0], frm.values[:, 1], labels=["Exploration", "Exploitation"])
+    ax.stackplot(domain, frm.values[:, 0], frm.values[:, 1], labels=labels)
     ax.legend(loc='lower left')
     ax.grid(True, linestyle='--')
     ax.set_xlabel("Training Epoch")
-    ax.set_title("Explore/Exploit tradeoff")
-    ax.set_ylabel("Percentage of actions")
+    ax.set_title(title)
+    ax.set_ylabel(ylabel)
     ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
-    ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.))
+    if normalized:
+        ax.yaxis.set_major_formatter(PercentFormatter(xmax=1. ))
     ax.set_ymargin(0.)
     ax.set_xmargin(0.)
     ax.autoscale(True)
@@ -139,7 +146,13 @@ def plot_action_distributions(ax, frm, epsilons=None):
 
 
 # %% Analysis
+only_successes = False
+
+if only_successes:
+    frame = frame[frame.success]
+
 groups = frame.groupby(lambda ix: ix // 100)
+
 X = np.arange(1000).reshape(-1, 1)
 epsilons = groups.apply(avg_epsilon)
 # Compute the average iteration number each 100 epochs
@@ -155,8 +168,25 @@ fig.show()
 # Compute the distribution of actions
 dists = groups.apply(action_distributions)
 dists = pd.concat([dists[:, 'Exploration'], dists[:, 'Exploitation']], axis=1).fillna(0.0)
-dists = dists.div(dists.sum(axis=1), axis=0)  # Normalize the rows
+if not only_successes:
+    dists = dists.div(dists.sum(axis=1), axis=0)  # Normalize the rows
+    ylabel =  "Percentage of actions"
+    normalized = True
+else:
+    normalized = False
+    ylabel = "Number of actions"
 dists.columns = ["Exploration", 'Exploitation']
 fig, ax = plt.subplots()
-plot_action_distributions(ax, dists, epsilons=epsilons)
+plot_action_distributions(ax, dists, ylabel, "Explore/Exploit tradeoff", labels=["Exploration", "Exploitation"], normalized=normalized, epsilons=epsilons)
 fig.show()
+
+if not only_successes:
+    # Compute the distribution of successes/failures
+    outcomes = groups.apply(outcome_distributions)
+    outcomes.columns = ["Success", "Failure"]
+    # outcomes = pd.concat([outcomes[:, "Success"], outcomes[:, "Failure"]], axis=1)
+    outcomes = outcomes.div(outcomes.sum(axis=1), axis=0)  # Normalize the rows
+    outcomes.columns = ["Success", 'Failure']
+    fig, ax = plt.subplots()
+    plot_action_distributions(ax, outcomes, "Percentage of outcome", "Outcome distribution over epochs", labels=["Success", "Failure"], epsilons=epsilons)
+    fig.show()
