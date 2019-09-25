@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 
 # %% Load all the data
 
-path = os.path.join('data', "trail3.tsv")
+path = os.path.join('data', "trial8.tsv")
 
 # Regexs for parsing the actions
 participant = re.compile(r"""Set\(([\w\,\s–\-\.%&'`\$]+)\)""")
-action = re.compile(r"""^([\d\.]+)/(\w+)\(""")
+action = re.compile(r"""^(([\d\.E\-]+)/)+(\w+)\(""")
 
 # This will be our Action data structure
 Action = namedtuple("Action", "epsilon action pa pb")
@@ -26,13 +26,23 @@ def parse_action(action_string):
     if action_string:
         # Preprocess the action string
         action_string = action_string.replace("()", "").replace("(,", ",")
-        a = action.findall(action_string)
-        epsilon, act = float(a[0][0]), a[0][1]
+        # a = action.findall(action_string)
+        action_ix = action_string.find("Explo")
+        a = [t for t in action_string[:action_ix].split("/") if t]
+        if len(a) == 2:
+            epsilon, reward = float(a[0]), float(a[1])
+        elif len(a) == 1:
+            epsilon, reward = float(a[0]), 0.
+
+        act = action_string[action_ix:].split("(")[0]
+
+
         p = participant.findall(action_string)
         if len(p) == 2:
             return Action(epsilon, act, p[0], p[1])
         else:
-            return Action(epsilon, act, p[0], None)
+            # return Action(epsilon, act, p[0], None)
+            return Action(epsilon, act, None, None)
     else:
         return None
 
@@ -69,27 +79,29 @@ frame = process_frame(pd.DataFrame(rows, columns=columns))
 
 
 # %% Helper functions
-def plot_with_regression(ax, series, ylabel, title, epsilons=None):
+def plot_with_regression(ax, series, ylabel, title, epsilons=None, regression=True):
     """Plots a series with its linear regression"""
     domain = np.arange(series.size).reshape(-1, 1)
-    reg = linear_model.LinearRegression()
-    reg.fit(domain, series)
+    if regression:
+        reg = linear_model.LinearRegression()
+        reg.fit(domain, series)
+        ax.plot(domain, reg.predict(domain), color='y', lw=3)
     ax.scatter(domain, series, s=7)
     ax.tick_params(axis='y', labelcolor='tab:blue')
-    ax.plot(domain, reg.predict(domain), color='y', lw=3)
     ax.grid(True)
     ax.set_title(title)
-    ax.set_xlabel("Training Epoch")
+    ax.set_xlabel("Batch repetition")
     ax.set_ylabel(ylabel, color = 'tab:blue')
-    ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
-    for label in ax.get_xaxis().get_ticklabels():
-        label.set_rotation(45)
-        label.set_fontsize(8)
+    # ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
+    # for label in ax.get_xaxis().get_ticklabels():
+    #     label.set_rotation(45)
+    #     label.set_fontsize(8)
 
     if epsilons is not None:
         ax2 = ax.twinx()
         ax2.plot(domain, epsilons, 'r--')
         ax2.set_ylabel("$\epsilon$-greedy schedule", color='tab:red')
+        ax2.autoscale(False)
         for label in ax2.yaxis.get_ticklabels():
             label.set_color('tab:red')
 
@@ -121,18 +133,18 @@ def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=Fa
     ax.stackplot(domain, frm.values[:, 0], frm.values[:, 1], labels=labels)
     ax.legend(loc='lower left')
     ax.grid(True, linestyle='--')
-    ax.set_xlabel("Training Epoch")
+    ax.set_xlabel("Batch repetition")
     ax.set_title(title)
     ax.set_ylabel(ylabel)
-    ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
+    # ax.get_xaxis().set_major_formatter(FuncFormatter(lambda x, p: "0" if x == 0 else r"%i$\times10^{100}$" % x))
     if normalized:
         ax.yaxis.set_major_formatter(PercentFormatter(xmax=1. ))
     ax.set_ymargin(0.)
     ax.set_xmargin(0.)
     ax.autoscale(True)
-    for label in ax.get_xaxis().get_ticklabels():
-        label.set_rotation(45)
-        label.set_fontsize(8)
+    # for label in ax.get_xaxis().get_ticklabels():
+    #     label.set_rotation(45)
+    #     label.set_fontsize(8)
 
     if epsilons is not None:
         ax2 = ax.twinx()
@@ -146,29 +158,31 @@ def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=Fa
 
 
 # %% Analysis
-only_successes = False
+ONLY_SUCCESSES = True
+SHOW_REGRESSIONS = False
+NORMALIZE_DISTS = True
 
-if only_successes:
-    frame = frame[frame.success]
+if ONLY_SUCCESSES:
+    frame = frame.loc[frame.success]
 
-groups = frame.groupby(lambda ix: ix // 100)
+groups = frame.groupby(lambda ix: ix // 251)
 
 X = np.arange(1000).reshape(-1, 1)
 epsilons = groups.apply(avg_epsilon)
 # Compute the average iteration number each 100 epochs
 fig, ax = plt.subplots()
 avg_iterations = groups['iterations'].mean()
-plot_with_regression(ax, avg_iterations, epsilons=epsilons.values, title="Average Iterations per epoch", ylabel="Avg iterations")
+plot_with_regression(ax, avg_iterations, epsilons=epsilons.values, title="Average Iterations per epoch", ylabel="Avg iterations", regression=SHOW_REGRESSIONS)
 fig.show()
 # Compute the average number papers read each 100 epochs
 fig, ax = plt.subplots()
 avg_papers = groups['papers'].mean()
-plot_with_regression(ax, avg_papers, "Average Papers", "Avg papers read", epsilons.values)
+plot_with_regression(ax, avg_papers, "Average Papers", "Avg papers read", epsilons.values, regression=SHOW_REGRESSIONS)
 fig.show()
 # Compute the distribution of actions
-dists = groups.apply(action_distributions)
-dists = pd.concat([dists[:, 'Exploration'], dists[:, 'Exploitation']], axis=1).fillna(0.0)
-if not only_successes:
+dists = groups.apply(action_distributions).unstack()
+dists = pd.concat([dists['Exploration'], dists['Exploitation']], axis=1).fillna(0.0)
+if NORMALIZE_DISTS:
     dists = dists.div(dists.sum(axis=1), axis=0)  # Normalize the rows
     ylabel =  "Percentage of actions"
     normalized = True
@@ -180,7 +194,7 @@ fig, ax = plt.subplots()
 plot_action_distributions(ax, dists, ylabel, "Explore/Exploit tradeoff", labels=["Exploration", "Exploitation"], normalized=normalized, epsilons=epsilons)
 fig.show()
 
-if not only_successes:
+if not ONLY_SUCCESSES:
     # Compute the distribution of successes/failures
     outcomes = groups.apply(outcome_distributions)
     outcomes.columns = ["Success", "Failure"]
