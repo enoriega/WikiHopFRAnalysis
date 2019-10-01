@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 # %% Load all the data
 
-path = os.path.join('data', "trial8.tsv")
+path = os.path.join('data', "trial11.tsv")
 
 # Regexs for parsing the actions
 participant = re.compile(r"""Set\(([\w\,\s–\-\.%&'`\$]+)\)""")
