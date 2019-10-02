@@ -1,13 +1,10 @@
-import csv
 import os
-import re
-from matplotlib.ticker import FuncFormatter, PercentFormatter
-from collections import namedtuple
+from matplotlib.ticker import PercentFormatter
 import pandas as pd
 import numpy as np
 from sklearn import linear_model
 import matplotlib.pyplot as plt
-from utils import load_frame
+from utils import load_frame, outcome_distributions, groupby_action_distribution
 
 
 # %% Helper functions
@@ -43,20 +40,6 @@ def avg_epsilon(grp):
     # Create a series with all the actions
     all_actions = pd.concat(grp[col] for col in action_columns)
     return all_actions.dropna().map(lambda a: a.epsilon).mean()
-
-
-def action_distributions(frm):
-    """Computes the distribution of actions from a data frame"""
-    all_actions = pd.concat(frm[col] for col in action_columns).dropna()
-    simplified_actions = all_actions.map(
-        lambda a: "Exploration" if a.action.startswith('Exploration') else 'Exploitation')
-    return simplified_actions.value_counts()
-
-
-def outcome_distributions(frm):
-    """Computes the distribution of actions from a data frame"""
-    outcomes = frm.success
-    return outcomes.value_counts()
 
 
 def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=False, epsilons=None):
@@ -116,17 +99,16 @@ fig, ax = plt.subplots()
 avg_papers = groups['papers'].mean()
 plot_with_regression(ax, avg_papers, "Average Papers", "Avg papers read", epsilons.values, regression=SHOW_REGRESSIONS)
 fig.show()
+
 # Compute the distribution of actions
-dists = groups.apply(action_distributions).unstack()
-dists = pd.concat([dists['Exploration'], dists['Exploitation']], axis=1).fillna(0.0)
+dists = groupby_action_distribution(groups, action_columns, NORMALIZE_DISTS)
 if NORMALIZE_DISTS:
-    dists = dists.div(dists.sum(axis=1), axis=0)  # Normalize the rows
     ylabel = "Percentage of actions"
     normalized = True
 else:
     normalized = False
     ylabel = "Number of actions"
-dists.columns = ["Exploration", 'Exploitation']
+
 fig, ax = plt.subplots()
 plot_action_distributions(ax, dists, ylabel, "Explore/Exploit tradeoff", labels=["Exploration", "Exploitation"],
                           normalized=normalized, epsilons=epsilons)

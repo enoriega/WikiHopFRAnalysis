@@ -2,7 +2,11 @@
 import csv
 import re
 from collections import namedtuple
+import random
+import numpy as np
 
+from matplotlib.ticker import PercentFormatter
+from tqdm import tqdm
 import pandas as pd
 
 participant = re.compile(r"""Set\(([\w\,\s–\-\.%&'`\$]+)\)""")
@@ -71,3 +75,65 @@ def load_frame(path):
     frame = process_frame(pd.DataFrame(rows, columns=columns))
 
     return frame, action_columns
+
+
+def bootsrapping_test(seq1, seq2, predicate, iters=1000):
+
+    size = len(seq1)
+
+    values = list()
+    for _ in tqdm(range(iters)):
+        indices = random.choices(range(size), k=size)
+        result = predicate(seq1.ix[indices], seq2.ix[indices])
+        values.append(result)
+
+    s = pd.Series(values)
+    normalized_estimates = s.value_counts() / len(s)
+
+    return normalized_estimates[True] if True in normalized_estimates else 0.
+
+
+def frame_action_distribution(frm, action_columns, normalized=False):
+    """Computes the distribution of actions from a data frame"""
+    all_actions = pd.concat(frm[col] for col in action_columns).dropna()
+    simplified_actions = all_actions.map(
+        lambda a: "Exploration" if a.action.startswith('Exploration') else 'Exploitation')
+    if normalized:
+        return simplified_actions.value_counts() / simplified_actions.value_counts().sum()
+    else:
+        return simplified_actions.value_counts()
+
+
+def outcome_distributions(frm):
+    """Computes the distribution of actions from a data frame"""
+    outcomes = frm.success
+    return outcomes.value_counts()
+
+
+def groupby_action_distribution(gb, action_columns, normalized):
+    gb = gb.apply(frame_action_distribution, action_columns).unstack()
+    gb = pd.concat([gb['Exploration'], gb['Exploitation']], axis=1).fillna(0.0)
+
+    if normalized:
+        gb = gb.div(gb.sum(axis=1), axis=0)  # Normalize the rows
+
+    gb.columns = ["Exploration", 'Exploitation']
+
+    return gb
+
+
+def plot_dist(ax, dist, title):
+    bottom = 0.
+    ordered = [(dist.loc[label], label) for label in sorted(dist.index, reverse=True)]
+    for y_val, label in ordered:
+        ax.bar(0, dist.loc[label], bottom=bottom, width=.3, label=label)
+        bottom += dist.loc[label]
+
+    ax.set_xlim(-0.5, 0.5)
+    ax.set_title(title)
+    ax.set_xticks([])
+    percentages = np.asarray([v for v, _ in ordered])
+    y_tick_positions = percentages.cumsum()
+    ax.set_yticks(y_tick_positions)
+    ax.set_yticklabels("%i" % (v*100) + "%" for v in percentages)
+    ax.legend()
