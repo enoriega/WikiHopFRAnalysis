@@ -73,7 +73,7 @@ def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=Fa
 
 
 # %% Load all the data
-path = os.path.join('data', "trial11.tsv")
+path = os.path.join('data', "trial13.tsv")
 frame, action_columns = load_frame(path)
 
 # %% Analysis
@@ -96,7 +96,7 @@ plot_with_regression(ax, avg_iterations, epsilons=epsilons.values, title="Averag
 fig.show()
 # Compute the average number papers read each 100 epochs
 fig, ax = plt.subplots()
-avg_papers = groups['papers'].mean()
+avg_papers = groups['papers'].mean() #/ groups['success'].apply(lambda s: s.astype(int).sum())
 plot_with_regression(ax, avg_papers, "Average Papers", "Avg papers read", epsilons.values, regression=SHOW_REGRESSIONS)
 fig.show()
 
