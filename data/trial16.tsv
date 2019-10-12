@@ -1,0 +1,83 @@
+outputDir = "output"
+
+files {
+  trainingPath = "../../wikihop/train.json"
+  testingPath = "/mnt/data/qangaroo_v1.1/wikihop/dev.json"
+  annotationsFile = "annotations_openie.txt"
+  openIEAnnotationsFile = ${outputDir}/openie_annotations.ser_deleteme
+  entityListFile = ${outputDir}/entities2.tsv
+  graphvizDir = ${outputDir}/graphviz
+  benchmarkOutput = ${outputDir}/benchmark_deps.json
+  glovePath = "../WikiHopFRDQN/glove.6B.50d.txt"
+}
+
+pathFinder{
+  knowledgeGraphType = "Cooccurrence" #NamedEntityLink, Cooccurrence, OpenIE
+  outputFile = newentities/cooccurrence_related_results_newGrounding.ser#${outputDir}/openie_related_results.ser
+}
+
+lucene {
+  directoryIndex = "WikiHopLuceneIndex"
+}
+
+embeddings {
+  dimensions = 200
+  model = skipgram #skipgram, cbow
+  binaryMatrix = false #true in case you want to store the matrix as a binary file
+  binaryPath = "./word2vec" # Path to the word2vec executable binary
+  threads = 12
+  embeddingsFile = ${outputDir}/wikihop_vectors.txt
+  vocabularyFile = "w2vvoc.txt"
+}
+
+environment {
+  knowledgeGraphType = Coocurrence #Coocurrence, OpenIE, NamedEntityLink
+  documentUniverse = Related#Local, Random, Related
+  successReward = 10
+  failureReward = -10
+  livingReward = 1
+  cacheAnnotations = false
+  topEntitiesNum = 10
+  maxIterations = 10
+  immediateRewardEnabled = true
+  entitySelection = rank #distance, rank
+}
+
+benchmark {
+  agentType = Cascade #Random, Cascade
+  # These are optional parameters, used to split the work on multiple instances (mainly for the HPC)
+  #totalWorkers = 3
+  #workerIndex = 1
+  #numInstances = 10
+  ######
+}
+
+training {
+  approximator = dqn #dqn or linear only holds if the agent is the policy agent
+  episodes = 100000
+  targetUpdate = 251
+  transitionMemorySize = 100000
+  epsilon {
+    upperBound = 1.0
+    lowerBound = 0.0
+    kind = linear #linear, exponential
+    length = 0.75 # This is the portion of the number of epoch by which the decay will be finished
+  }
+  modelName = "trial16.pt"
+  statsDump = "trial16.tsv"
+  maxThreads = 30
+}
+
+httpClient {
+  server = "http://127.0.0.1:5000"
+//  server = "http://192.168.1.42:5000"
+}
+
+testing {
+  agentType = Random // Policy, Cascade, Random
+  approximator = linear #dqn or linear only holds if the agent is the policy agent
+  modelName = "model_scala.pt" // This only holds if the agent is the policy agent
+  statsDump = "baseline_random.tsv"
+  maxThreads = 12
+}
+
