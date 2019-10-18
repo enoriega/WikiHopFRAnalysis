@@ -13,7 +13,7 @@ participant = re.compile(r"""Set\(([\w\,\s–\-\.%&'`\$]+)\)""")
 action = re.compile(r"""^(([\d\.E\-]+)/)+(\w+)\(""")
 
 # This will be our Action data structure
-Action = namedtuple("Action", "epsilon action pa pb")
+Action = namedtuple("Action", "epsilon reward action pa pb")
 
 
 def parse_action(action_string):
@@ -34,10 +34,10 @@ def parse_action(action_string):
 
         p = participant.findall(action_string)
         if len(p) == 2:
-            return Action(epsilon, act, p[0], p[1])
+            return Action(epsilon,reward, act, p[0], p[1])
         else:
             # return Action(epsilon, act, p[0], None)
-            return Action(epsilon, act, None, None)
+            return Action(epsilon, reward, act, None, None)
     else:
         return None
 
@@ -107,7 +107,9 @@ def frame_action_distribution(frm, action_columns, normalized=False):
 def outcome_distributions(frm):
     """Computes the distribution of actions from a data frame"""
     outcomes = frm.success
-    return outcomes.value_counts()
+    dist = outcomes.value_counts()
+
+    return dist
 
 
 def groupby_action_distribution(gb, action_columns, normalized):
