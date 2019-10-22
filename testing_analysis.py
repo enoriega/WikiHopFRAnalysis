@@ -7,7 +7,7 @@ import numpy as np
 from utils import load_frame, bootsrapping_test, frame_action_distribution, plot_dist
 
 # %% Load the data
-path_policy = os.path.join('data', "trial13_eval.tsv")
+path_policy = os.path.join('data', "trial19_eval_2.tsv")
 path_random = os.path.join('data', "baseline_balancedrandom.tsv")
 path_cascade = os.path.join('data', "baseline_cascade.tsv")
 path_exploit = os.path.join('data', "baseline_exploit.tsv")
@@ -56,7 +56,7 @@ def max_val(*series):
 
 
 # %% Analysis
-SUCCESS_ONLY = True
+SUCCESS_ONLY = False
 
 if SUCCESS_ONLY:
     policy = policy_orig[policy_orig.success]
