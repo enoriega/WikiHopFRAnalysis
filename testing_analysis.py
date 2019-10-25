@@ -7,11 +7,11 @@ import numpy as np
 from utils import load_frame, bootsrapping_test, frame_action_distribution, plot_dist
 
 # %% Load the data
-path_policy = os.path.join('data', "trial19_eval_2.tsv")
-path_random = os.path.join('data', "baseline_balancedrandom.tsv")
-path_cascade = os.path.join('data', "baseline_cascade.tsv")
-path_exploit = os.path.join('data', "baseline_exploit.tsv")
-path_explore = os.path.join('data', "baseline_explore.tsv")
+path_policy = os.path.join('data', "trial23_eval.tsv")
+path_random = os.path.join('data', "baseline_balancedrandom_n.tsv")
+path_cascade = os.path.join('data', "baseline_cascade_n.tsv")
+path_exploit = os.path.join('data', "baseline_exploit_n.tsv")
+path_explore = os.path.join('data', "baseline_explore_n.tsv")
 
 policy_orig, policy_action_cols = load_frame(path_policy)
 policy_orig.set_index("id", inplace=True)
@@ -158,16 +158,16 @@ def efficiency_comparison(a, b):
     return efficiency_ratio(a) < efficiency_ratio(b)
 
 
-def statistical_comparison(policy, baseline, iters = 1000):
-    shared_ix = overlapping_index(policy, baseline)
-    print("Policy: %.2f\tBaseline: %.2f" % (
-    average_papers_read(policy.loc[shared_ix]), average_papers_read(baseline.loc[shared_ix])))
+def statistical_comparison(left, right, iters = 1000):
+    shared_ix = overlapping_index(left, right)
+    print("A: %.2f\tB: %.2f" % (
+        average_papers_read(left.loc[shared_ix]), average_papers_read(right.loc[shared_ix])))
     print("Doing significance tests with bootstraping with %i iterations" % iters)
-    bootstrapped_average_significance = bootsrapping_test(policy.loc[shared_ix],
-                                                          baseline.loc[shared_ix],
+    bootstrapped_average_significance = bootsrapping_test(left.loc[shared_ix],
+                                                          right.loc[shared_ix],
                                                           average_comparison, iters=iters)
     print(
-        "The average of papers read by the policy is less than that of the baseline with p = %.3f significance" % bootstrapped_average_significance)
+        "The average of papers read by the A is less than that of the B with p = %.3f significance" % bootstrapped_average_significance)
 
-
+print("A: Policy\tB: Cascade")
 statistical_comparison(policy, cascade)

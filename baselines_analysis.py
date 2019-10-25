@@ -1,5 +1,7 @@
 from os import path
 import glob
+import csv
+import pandas as pd
 
 from matplotlib.ticker import FixedFormatter
 
@@ -9,25 +11,41 @@ import itertools as it
 from operator import attrgetter
 import matplotlib.pyplot as plt
 
-DIR = path.join('data', 'baselines')
-PATTERN = path.join(DIR, '*')
+DIR_RB = path.join('data', 'baselines_new')
+PATTERN_RB = path.join(DIR_RB, '*')
 
-files = glob.glob(PATTERN)
+DIR_CS = path.join('data', 'cascades_new')
+PATTERN_CS = path.join(DIR_CS, '*')
+
+files_random_baselines = glob.glob(PATTERN_RB)
+files_cascade = glob.glob(PATTERN_CS)
+
 Instance = namedtuple("Instance", 'name p seed frame')
-Stats = namedtuple("Stats", 'p success_rates avg_papers avg_iterations size')
+Stats = namedtuple("Stats", 'p success_rates avg_papers avg_iterations efficiency size')
 
-instances = list()
+instances_rb = list()
 
-for f in files:
+for f in files_random_baselines:
     name = f.split(path.sep)[-1][:-4]
     _, __, p, seed = name.split('_')
     frame, _ = load_frame(f)
     instance = Instance(name, float(p), int(seed), frame)
-    instances.append(instance)
+    instances_rb.append(instance)
 
+instances_cs = list()
+
+for f in files_cascade:
+    name = f.split(path.sep)[-1][:-4]
+    _, seed = name.split('_')
+    frame, _ = load_frame(f)
+    instance = Instance(name, 0, int(seed), frame)
+    instances_cs.append(instance)
+
+with open(path.join('data', 'testing_instances.txt')) as f:
+    testing_ids = {l[:-1] for l in f}
 
 get_p = attrgetter('p')
-groups = it.groupby(sorted(instances, key=get_p), key=get_p)
+groups = it.groupby(sorted(instances_rb, key=get_p), key=get_p)
 
 
 def success_rate(f):
@@ -42,6 +60,10 @@ def avg_papers(f):
     return f.papers.mean()
 
 
+def efficiency(f):
+    return f.success.astype(int).sum() / f.papers.sum()
+
+
 def prep_4_plot(stats, field):
     getter = attrgetter(field)
     x = it.chain.from_iterable(it.repeat(st.p, st.size) for st in stats)
@@ -51,13 +73,38 @@ def prep_4_plot(stats, field):
 
 
 stats = list()
+plt.figure()
+plt.title("Baseline Performance Comparison")
+plt.xlabel("Average papers read")
+plt.ylabel("Success rate")
+plt.ylim(0, 1)
+plt.grid(True)
 for name, group in groups:
     frames = [i.frame for i in group]
     success_rates = [success_rate(f) for f in frames]
     papers = [avg_papers(f) for f in frames]
     iterations = [avg_iterations(f) for f in frames]
-    st = Stats(name, success_rates, papers, iterations, len(frames))
+    eff = [efficiency(f) for f in frames]
+    st = Stats(name, success_rates, papers, iterations, eff, len(frames))
     stats.append(st)
+
+    plt.scatter(papers, success_rates, label="$p = %0.2f$" % name)
+
+plt.scatter([avg_papers(f.frame) for f in instances_cs], [success_rate(f.frame) for f in instances_cs], label="Cascade")
+
+# The optimal performer
+with open(path.join('data', 'min_docs.tsv')) as f:
+    reader = csv.reader(f, delimiter='\t')
+    min_necessary = {row[0]: len(row[1:]) for row in reader if row[0] in testing_ids}
+
+optimal_success_rate = len(min_necessary) / frames[0].shape[0]
+optimal_avg_papers = pd.Series(list(min_necessary.values())).mean()
+
+plt.scatter([optimal_avg_papers], [optimal_success_rate], label="Optimal Agent")
+
+plt.legend(loc='lower right')
+plt.show()
+plt.close()
 
 
 def box_plot(data, title, ylabel):
@@ -72,10 +119,7 @@ def box_plot(data, title, ylabel):
     plt.show()
     plt.close()
 
-
-box_plot([s.avg_papers for s in stats], "Baselines' Papers Consumption", "Average papers")
-box_plot([s.avg_iterations for s in stats], "Baselines' Iterations", "Average iterations")
-box_plot([s.success_rates for s in stats], "Baselines' Success Rate", "Success rate")
-
-
-
+# box_plot([s.avg_papers for s in stats], "Baselines' Papers Consumption", "Average papers")
+# box_plot([s.avg_iterations for s in stats], "Baselines' Iterations", "Average iterations")
+# box_plot([s.success_rates for s in stats], "Baselines' Success Rate", "Success rate")
+# box_plot([s.efficiency for s in stats], "Baselines' Efficiency", "Efficiency")

@@ -73,7 +73,7 @@ def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=Fa
 
 
 # %% Load all the data
-path = os.path.join('data', "trial21.tsv")
+path = os.path.join('data', "trial23.tsv")
 frame, action_columns = load_frame(path)
 
 # %% Analysis
