@@ -7,7 +7,7 @@ import numpy as np
 from utils import load_frame, bootsrapping_test, frame_action_distribution, plot_dist
 
 # %% Load the data
-path_policy = os.path.join('data', "trial23_eval.tsv")
+path_policy = os.path.join('data', "trial29_eval.tsv")
 path_random = os.path.join('data', "baseline_balancedrandom_n.tsv")
 path_cascade = os.path.join('data', "baseline_cascade_n.tsv")
 path_exploit = os.path.join('data', "baseline_exploit_n.tsv")

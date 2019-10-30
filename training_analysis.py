@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn import linear_model
 import matplotlib.pyplot as plt
-from utils import load_frame, outcome_distributions, groupby_action_distribution
+from utils import load_frame, outcome_distributions, group_by_action_distribution
 
 
 # %% Helper functions
@@ -73,7 +73,7 @@ def plot_action_distributions(ax, frm, ylabel, title, labels=None, normalized=Fa
 
 
 # %% Load all the data
-path = os.path.join('data', "trial23.tsv")
+path = os.path.join('data', "trial29.tsv")
 frame, action_columns = load_frame(path)
 
 # %% Analysis
@@ -101,7 +101,7 @@ plot_with_regression(ax, avg_papers, "Average Papers", "Avg papers read", epsilo
 fig.show()
 
 # Compute the distribution of actions
-dists = groupby_action_distribution(groups, action_columns, NORMALIZE_DISTS)
+dists = group_by_action_distribution(groups, action_columns, NORMALIZE_DISTS)
 if NORMALIZE_DISTS:
     ylabel = "Percentage of actions"
     normalized = True

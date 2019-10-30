@@ -4,6 +4,7 @@ import re
 from collections import namedtuple
 import random
 import numpy as np
+from os import path
 
 from matplotlib.ticker import PercentFormatter
 from tqdm import tqdm
@@ -34,7 +35,7 @@ def parse_action(action_string):
 
         p = participant.findall(action_string)
         if len(p) == 2:
-            return Action(epsilon,reward, act, p[0], p[1])
+            return Action(epsilon, reward, act, p[0], p[1])
         else:
             # return Action(epsilon, act, p[0], None)
             return Action(epsilon, reward, act, None, None)
@@ -78,7 +79,6 @@ def load_frame(path):
 
 
 def bootsrapping_test(seq1, seq2, predicate, iters=1000):
-
     size = len(seq1)
 
     values = list()
@@ -112,7 +112,7 @@ def outcome_distributions(frm):
     return dist
 
 
-def groupby_action_distribution(gb, action_columns, normalized):
+def group_by_action_distribution(gb, action_columns, normalized):
     gb = gb.apply(frame_action_distribution, action_columns).unstack()
     gb = pd.concat([gb['Exploration'], gb['Exploitation']], axis=1).fillna(0.0)
 
@@ -137,5 +137,20 @@ def plot_dist(ax, dist, title):
     percentages = np.asarray([v for v, _ in ordered])
     y_tick_positions = percentages.cumsum()
     ax.set_yticks(y_tick_positions)
-    ax.set_yticklabels("%i" % (v*100) + "%" for v in percentages)
+    ax.set_yticklabels("%i" % (v * 100) + "%" for v in percentages)
     ax.legend()
+
+
+def min_papers():
+    with open(path.join('data', 'min_docs.tsv')) as f:
+        reader = csv.reader(f, delimiter='\t')
+        ret = {r[0]: len(r[1:]) for r in reader}
+
+    return ret
+
+
+def missing_min_papers():
+    with open(path.join('data', 'missing.txt')) as f:
+        missing = {l.strip() for l in f}
+
+    return missing

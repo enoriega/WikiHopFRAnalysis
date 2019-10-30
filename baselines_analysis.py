@@ -11,10 +11,10 @@ import itertools as it
 from operator import attrgetter
 import matplotlib.pyplot as plt
 
-DIR_RB = path.join('data', 'baselines_new')
+DIR_RB = path.join('data', 'baselines_lucene')
 PATTERN_RB = path.join(DIR_RB, '*')
 
-DIR_CS = path.join('data', 'cascades_new')
+DIR_CS = path.join('data', 'cascades_lucene')
 PATTERN_CS = path.join(DIR_CS, '*')
 
 files_random_baselines = glob.glob(PATTERN_RB)
@@ -46,6 +46,8 @@ with open(path.join('data', 'testing_instances.txt')) as f:
 
 get_p = attrgetter('p')
 groups = it.groupby(sorted(instances_rb, key=get_p), key=get_p)
+
+frame_policy, _ = load_frame(path.join('data', 'trial29_eval.tsv'))
 
 
 def success_rate(f):
@@ -101,6 +103,7 @@ optimal_success_rate = len(min_necessary) / frames[0].shape[0]
 optimal_avg_papers = pd.Series(list(min_necessary.values())).mean()
 
 plt.scatter([optimal_avg_papers], [optimal_success_rate], label="Optimal Agent")
+plt.scatter([avg_papers(frame_policy)], [success_rate(frame_policy)], label="Policy")
 
 plt.legend(loc='lower right')
 plt.show()
