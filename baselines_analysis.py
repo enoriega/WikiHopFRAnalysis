@@ -17,8 +17,12 @@ PATTERN_RB = path.join(DIR_RB, '*')
 DIR_CS = path.join('data', 'cascades_lucene')
 PATTERN_CS = path.join(DIR_CS, '*')
 
+DIR_PL = path.join('data', 'policy')
+PATTERN_PL = path.join(DIR_PL, '*')
+
 files_random_baselines = glob.glob(PATTERN_RB)
 files_cascade = glob.glob(PATTERN_CS)
+files_policy = glob.glob(PATTERN_PL)
 
 Instance = namedtuple("Instance", 'name p seed frame')
 Stats = namedtuple("Stats", 'p success_rates avg_papers avg_iterations efficiency size')
@@ -41,13 +45,21 @@ for f in files_cascade:
     instance = Instance(name, 0, int(seed), frame)
     instances_cs.append(instance)
 
+instances_pl = list()
+
+for f in files_policy:
+    name = f.split(path.sep)[-1][:-4]
+    frame, _ = load_frame(f)
+    instance = Instance(name, 0, 0, frame)
+    instances_pl.append(instance)
+
 with open(path.join('data', 'testing_instances.txt')) as f:
     testing_ids = {l[:-1] for l in f}
 
 get_p = attrgetter('p')
 groups = it.groupby(sorted(instances_rb, key=get_p), key=get_p)
 
-frame_policy, _ = load_frame(path.join('data', 'trial29_eval.tsv'))
+# frame_policy, _ = load_frame(path.join('data', 'trial30_eval.tsv'))
 
 
 def success_rate(f):
@@ -94,6 +106,8 @@ for name, group in groups:
 
 plt.scatter([avg_papers(f.frame) for f in instances_cs], [success_rate(f.frame) for f in instances_cs], label="Cascade")
 
+plt.scatter([avg_papers(f.frame) for f in instances_pl], [success_rate(f.frame) for f in instances_pl], marker="x", color="black", label="Policy")
+
 # The optimal performer
 with open(path.join('data', 'min_docs.tsv')) as f:
     reader = csv.reader(f, delimiter='\t')
@@ -103,7 +117,7 @@ optimal_success_rate = len(min_necessary) / frames[0].shape[0]
 optimal_avg_papers = pd.Series(list(min_necessary.values())).mean()
 
 plt.scatter([optimal_avg_papers], [optimal_success_rate], label="Optimal Agent")
-plt.scatter([avg_papers(frame_policy)], [success_rate(frame_policy)], label="Policy")
+
 
 plt.legend(loc='lower right')
 plt.show()
