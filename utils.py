@@ -154,3 +154,15 @@ def missing_min_papers():
         missing = {l.strip() for l in f}
 
     return missing
+
+
+def observed_reward(frame: pd.DataFrame):
+    max_num_actions = max(int(c.split('_')[1]) for c in frame.columns if c.startswith("action_"))
+
+    def get_last_action(row):
+        for i in range(max_num_actions, 0, -1):
+            col = 'action_%i' % i
+            if row[col]:
+                return row[col].reward
+
+    return frame.apply(get_last_action, axis=1)
