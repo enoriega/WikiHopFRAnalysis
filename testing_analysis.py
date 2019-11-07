@@ -7,7 +7,7 @@ import numpy as np
 from utils import load_frame, bootsrapping_test, frame_action_distribution, plot_dist
 
 # %% Load the data
-path_policy = os.path.join('data', "trial30_eval.tsv")
+path_policy = os.path.join('data', "trial38c_eval.tsv")
 path_random = os.path.join('data', "baseline_balancedrandom_n.tsv")
 path_cascade = os.path.join('data', "baseline_cascade_n.tsv")
 path_exploit = os.path.join('data', "baseline_exploit_n.tsv")
@@ -170,4 +170,4 @@ def statistical_comparison(left, right, iters = 1000):
         "The average of papers read by the A is less than that of the B with p = %.3f significance" % bootstrapped_average_significance)
 
 print("A: Policy\tB: Cascade")
-statistical_comparison(policy, cascade)
+statistical_comparison(policy, random)
