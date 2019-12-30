@@ -1,9 +1,12 @@
 import csv
 import itertools as it
+from heapq import heappush, heappop
+
 import numpy as np
-from random import sample, shuffle
+from random import sample, shuffle, choice
 from sklearn.feature_extraction.text import CountVectorizer
 from simanneal import Annealer
+from tqdm import tqdm
 
 BINARY = False
 
@@ -22,19 +25,57 @@ class DataSetAnnealer(Annealer):
         self.matrix = matrix
         super(DataSetAnnealer, self).__init__(state)  # important!
 
+    # def move(self):
+    #     left, right = self.state
+    #
+    #     if len(left) < 100:
+    #         bump(right, left)
+    #     elif len(right) > 100:
+    #         bump(left, right)
+    #     else:
+    #         coin = np.random.randint(2)
+    #         if coin == 0:
+    #             bump(right, left)
+    #         else:
+    #             bump(left, right)
+    #
+    #     self.state = (left, right)
+
     def move(self):
         left, right = self.state
+        matrix = self.matrix
+        heap = []
+        k = 10
+        current_energy = self.energy()
 
-        if len(left) < 100:
-            bump(right, left)
-        elif len(right) > 100:
-            bump(left, right)
+        candidates_left, candidates_right = 0, 0
+
+        for e in left:
+            new_energy = error(matrix[list(left - {e}), :], matrix[list(right | {e}), :])
+            if new_energy < current_energy:
+                heappush(heap, (new_energy, (e, "left")))
+                candidates_left += 1
+            if candidates_left == k:
+                break
+
+        for e in right:
+            new_energy = error(matrix[list(left | {e}), :], matrix[list(right - {e}), :])
+            if new_energy < current_energy:
+                candidates_right += 1
+                heappush(heap, (new_energy, (e, "right")))
+            if candidates_right == k:
+                break
+
+        top_k = [heappop(heap) for i in range(len(heap))]
+
+        _, (ix, source) = choice(top_k)
+
+        if source == 'right':
+            right -= {ix}
+            left |= {ix}
         else:
-            coin = np.random.randint(2)
-            if coin == 0:
-                bump(right, left)
-            else:
-                bump(left, right)
+            right |= {ix}
+            left -= {ix}
 
         self.state = (left, right)
 
@@ -42,10 +83,9 @@ class DataSetAnnealer(Annealer):
         left, right = self.state
         matrix = self.matrix
 
-        e = error(matrix[left, :], matrix[right, :])
+        e = error(matrix[list(left), :], matrix[list(right), :])
 
-        print(e)
-
+        # print(e)
         return e
 
 
@@ -82,7 +122,9 @@ def anneal():
     pool = list(index.keys())
     shuffle(pool)
 
-    annealer = DataSetAnnealer(([], pool), matrix)
+    left, right = set(pool[:len(pool)//2]), set(pool[len(pool)//2:])
+
+    annealer = DataSetAnnealer((left, right), matrix)
     # annealer.updates = 10
     # annealer.steps = 200
 
@@ -99,14 +141,14 @@ def parse_result(path):
         reader = csv.reader(f)
         rows = list(reader)
 
-    left = [index[int(i)] for i in rows[0]]
-    right = [index[int(i)] for i in rows[1]]
+    left = {index[int(i)] for i in rows[0]}
+    right = {index[int(i)] for i in rows[1]}
 
     return left, right
 
 
 if __name__ == '__main__':
-    # anneal()
+    anneal()
 
-    left, right = parse_result('data_partition_multinomial_2.csv')
-    print(len(left), len(right))
+    # left, right = parse_result('data_partition_multinomial_2.csv')
+    # print(len(left), len(right))
