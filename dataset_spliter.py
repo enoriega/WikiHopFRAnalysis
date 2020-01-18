@@ -25,22 +25,6 @@ class DataSetAnnealer(Annealer):
         self.matrix = matrix
         super(DataSetAnnealer, self).__init__(state)  # important!
 
-    # def move(self):
-    #     left, right = self.state
-    #
-    #     if len(left) < 100:
-    #         bump(right, left)
-    #     elif len(right) > 100:
-    #         bump(left, right)
-    #     else:
-    #         coin = np.random.randint(2)
-    #         if coin == 0:
-    #             bump(right, left)
-    #         else:
-    #             bump(left, right)
-    #
-    #     self.state = (left, right)
-
     def move(self):
         left, right = self.state
         matrix = self.matrix
@@ -148,7 +132,26 @@ def parse_result(path):
 
 
 if __name__ == '__main__':
-    anneal()
+    # anneal()
 
-    # left, right = parse_result('data_partition_multinomial_2.csv')
-    # print(len(left), len(right))
+    matrix, _ = read_data()
+
+    # Invert the index
+    # with open('data_partition_multinomial_2.csv') as f:
+    #     reader = csv.reader(f)
+    #     rows = list(reader)
+    #
+    # l = [int(i) for i in rows[0]]
+    # r = [int(i) for i in rows[1]]
+    # print(error(matrix[l, :], matrix[r, :]))
+
+    left, right = parse_result('data_partition_multinomial_2.csv')
+
+    with open('training_multinomial.txt', 'w') as f, open('testing_multinomial.txt', 'w') as g:
+        for i in left:
+            f.write('{}\n'.format(i))
+
+        for j in right:
+            g.write('{}\n'.format(j))
+
+    print(len(left), len(right))
